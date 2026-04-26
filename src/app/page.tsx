@@ -5,8 +5,6 @@ import {
   Settings as SettingsIcon,
   Plus,
   Trash2,
-  Wand2,
-  LineChart as LineChartIcon,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
@@ -108,7 +106,35 @@ export default function Dashboard() {
       if (numVal === undefined) {
         delete acc.months[monthKey][day];
       } else {
+        const oldVal = acc.months[monthKey][day];
         acc.months[monthKey][day] = numVal;
+
+        // 1. Auto-fill gaps backwards: if there's a balance on a previous day, fill the empty days in between
+        let lastFilledDay = -1;
+        for (let i = day - 1; i >= 1; i--) {
+          if (acc.months[monthKey][i] !== undefined) {
+            lastFilledDay = i;
+            break;
+          }
+        }
+
+        if (lastFilledDay !== -1) {
+          const prevBal = acc.months[monthKey][lastFilledDay];
+          for (let i = lastFilledDay + 1; i < day; i++) {
+            acc.months[monthKey][i] = prevBal;
+          }
+        }
+
+        // 2. Ripple Forward: update all subsequent days that have the same old value or are undefined
+        // This ensures that if you change day 14, days 15, 16, etc. follow the new balance until a different manual entry is hit.
+        for (let i = day + 1; i <= daysInMonth; i++) {
+          if (acc.months[monthKey][i] === undefined || acc.months[monthKey][i] === oldVal) {
+            acc.months[monthKey][i] = numVal;
+          } else {
+            // Stop rippling if we hit a day that was already manually set to something else
+            break;
+          }
+        }
       }
 
       newAccounts[accIndex] = acc;
@@ -143,36 +169,6 @@ export default function Dashboard() {
     showToast(`🗑️ Data cleared (${scope})`);
   };
 
-  const autoFillWeekends = () => {
-    if (!activeAccount) return;
-    setState(prev => {
-      const newAccounts = [...prev.accounts];
-      const acc = { ...newAccounts[prev.activeAccountIndex] };
-      acc.months = { ...acc.months };
-      const currentMonthData = { ...acc.months[monthKey] };
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(prev.viewMonth.y, prev.viewMonth.m, d);
-        const dow = date.getDay();
-        if ((dow === 0 || dow === 6) && currentMonthData[d] === undefined) {
-          // Find last available balance
-          let lastBal = 0;
-          for (let prevD = d - 1; prevD >= 1; prevD--) {
-            if (currentMonthData[prevD] !== undefined) {
-              lastBal = currentMonthData[prevD];
-              break;
-            }
-          }
-          if (lastBal > 0) currentMonthData[d] = lastBal;
-        }
-      }
-
-      acc.months[monthKey] = currentMonthData;
-      newAccounts[prev.activeAccountIndex] = acc;
-      return { ...prev, accounts: newAccounts };
-    });
-    showToast("🪄 Weekends auto-filled");
-  };
 
   const editAccount = (index: number) => {
     setAccountModalMode('edit');
@@ -236,7 +232,6 @@ export default function Dashboard() {
             <div className="logo">AMB</div>
             <div className="header-actions">
               <button className="icon-btn" onClick={() => setIsClearModalOpen(true)} style={{ color: 'var(--red)' }} title="Clear Data"><Trash2 size={18} /></button>
-              <button className="icon-btn" onClick={autoFillWeekends} title="Auto-fill Weekends"><Wand2 size={18} /></button>
               <button className="icon-btn" onClick={() => setIsSettingsOpen(true)} title="Settings"><SettingsIcon size={18} /></button>
             </div>
           </header>

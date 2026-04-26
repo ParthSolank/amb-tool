@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { X, Upload, Download, FileJson, Package, Sun, Moon } from 'lucide-react';
+import { X, FileJson, Package, Sun, Moon } from 'lucide-react';
 import { AppState } from '@/lib/types';
-import { parseCSV, parseExcel, parsePDF, ParsedTransaction } from '@/lib/parsers';
 
 interface SettingsModalProps {
   state: AppState;
@@ -14,50 +13,11 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ state, setState, isOpen, onClose, showToast }: SettingsModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    let results: ParsedTransaction[] = [];
-
-    try {
-      showToast('⌛ Parsing file...');
-      if (ext === 'xlsx' || ext === 'xls') results = await parseExcel(file);
-      else if (ext === 'pdf') results = await parsePDF(file);
-      else results = await parseCSV(file);
-
-      if (results.length > 0) {
-        setState(prev => {
-          const newAccounts = [...prev.accounts];
-          const acc = { ...newAccounts[prev.activeAccountIndex] };
-          acc.months = { ...acc.months };
-          const monthKey = `${prev.viewMonth.y}-${String(prev.viewMonth.m + 1).padStart(2, '0')}`;
-          acc.months[monthKey] = { ...acc.months[monthKey] };
-
-          results.forEach(res => {
-            if (res.date.getFullYear() === prev.viewMonth.y && res.date.getMonth() === prev.viewMonth.m) {
-              acc.months[monthKey][res.date.getDate()] = res.balance;
-            }
-          });
-
-          newAccounts[prev.activeAccountIndex] = acc;
-          return { ...prev, accounts: newAccounts };
-        });
-        showToast(`✅ Imported ${results.length} records`);
-      } else {
-        showToast('❌ No valid data found');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('❌ Import failed');
-    }
-  };
 
   const setCurrency = (curr: string) => {
     setState(prev => ({ ...prev, currency: curr }));
@@ -131,15 +91,12 @@ export default function SettingsModal({ state, setState, isOpen, onClose, showTo
           <button className="btn btn-ghost" onClick={() => setState(p => ({...p, theme: p.theme === 'dark' ? 'light' : 'dark'}))}>
             {state.theme === 'dark' ? <Sun size={16} style={{marginRight: 8}}/> : <Moon size={16} style={{marginRight: 8}}/>} Theme
           </button>
-          <button className="btn btn-ghost" onClick={() => fileInputRef.current?.click()}><Upload size={16} style={{marginRight: 8}}/> Import File</button>
-          <button className="btn btn-ghost" onClick={() => {/* export csv */}}><Download size={16} style={{marginRight: 8}}/> Export CSV</button>
           <button className="btn btn-ghost" onClick={handleBackup}><Package size={16} style={{marginRight: 8}}/> Backup</button>
           <button className="btn btn-ghost" onClick={() => jsonInputRef.current?.click()}><FileJson size={16} style={{marginRight: 8}}/> Restore</button>
           <button className="btn btn-ghost" onClick={handleExportPDF} style={{ gridColumn: 'span 2', background: 'var(--accent)', color: 'white' }}>📄 Export PDF Report</button>
         </div>
 
 
-        <input type="file" ref={fileInputRef} accept=".csv,.xls,.xlsx,.pdf" style={{ display: 'none' }} onChange={handleImport} />
         <input type="file" ref={jsonInputRef} accept=".json" style={{ display: 'none' }} onChange={handleRestore} />
       </div>
     </div>
