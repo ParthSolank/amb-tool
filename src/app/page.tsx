@@ -332,8 +332,8 @@ export default function Dashboard() {
                 <AlertCircle size={18} />
                 <div className="status-text">
                   {stats.runAvg >= activeAccount.target
-                    ? <>Maintaining <strong>Target AMB</strong></>
-                    : <><strong>{state.currency}{Math.round(activeAccount.target - stats.runAvg).toLocaleString()}</strong> away from target</>
+                    ? <>Maintaining <strong>Target AMB</strong> (Avg: <strong>{state.currency}{Math.round(stats.runAvg).toLocaleString()}</strong>)</>
+                    : <><strong>{state.currency}{Math.round(activeAccount.target - stats.runAvg).toLocaleString()}</strong> away from <strong>{state.currency}{activeAccount.target.toLocaleString()}</strong> target (Need <strong>{state.currency}{Math.round(stats.needed).toLocaleString()}</strong>/day)</>
                   }
                 </div>
               </div>
